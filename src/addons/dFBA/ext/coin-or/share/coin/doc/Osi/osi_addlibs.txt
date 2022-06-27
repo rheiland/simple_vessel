@@ -1,1 +1,0 @@
--L/Users/runner/work/coinbrew/coinbrew/dist/lib -lOsi -lCoinUtils -lbz2 -lz -lm
