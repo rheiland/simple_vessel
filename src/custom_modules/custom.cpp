@@ -168,7 +168,9 @@ void setup_tissue( void )
 	
 	Cell* pC;
 	
-    double cyl_end_xval = parameters.doubles("cyl_x1");
+    double cyl_end_xval = parameters.doubles("cyl_x1");  // get from user_params in .xml
+    double sphere_radius = 30.0;
+    int nV = 0;
 
 	for( int k=0; k < cell_definitions_by_index.size() ; k++ )
 	{
@@ -180,9 +182,11 @@ void setup_tissue( void )
 			// position[0] = Xmin + UniformRandom()*Xrange; 
 			// position[1] = Ymin + UniformRandom()*Yrange; 
 			// position[2] = Zmin + UniformRandom()*Zrange; 
-			double xval = cyl_end_xval + UniformRandom()*30; 
-			double yval = UniformRandom()*30; 
-			double zval = UniformRandom()*30; 
+
+            // sprinkle some cells near the end of the cylinder/vessel
+			double xval = cyl_end_xval + UniformRandom()*sphere_radius; 
+			double yval = UniformRandom()*sphere_radius; 
+			double zval = UniformRandom()*sphere_radius; 
 			position[0] = xval;
 			position[1] = yval; 
 			position[2] = zval; 
@@ -190,6 +194,9 @@ void setup_tissue( void )
 			
 			pC = create_cell( *pCD ); 
 			pC->assign_position( position );
+
+            int m = microenvironment.nearest_voxel_index( position );
+            microenvironment(m)[nV] = 32.0;
 		}
 	}
 	std::cout << std::endl; 
