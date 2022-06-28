@@ -1396,33 +1396,47 @@ class Vis(QWidget):
         M = info_dict['multiscale_microenvironment']
         print('plot_substrate: self.field_index=',self.field_index)
 
-        # debug
-        # fsub = M[self.field_index,:]   # 
-        # print("substrate min,max=",fsub.min(), fsub.max())
+        # try:
+        #     print("self.numx, self.numy = ",self.numx, self.numy )
+        # except:
+        #     print("Error: self.numx, self.numy not defined.")
+        #     return
+        # # nxny = numx * numy
 
-        # print("M.shape = ",M.shape)  # e.g.,  (6, 421875)  (where 421875=75*75*75)
+        # try:
+        #     xgrid = M[0, :].reshape(self.numy, self.numx)
+        #     ygrid = M[1, :].reshape(self.numy, self.numx)
+        # except:
+        #     print("error: cannot reshape ",self.numy, self.numx," for array ",M.shape)
+        #     return
 
-        # numx = int(M.shape[1] ** (1./3) + 1)
-        # numy = numx
-        # self.numx = 50  # for template model
-        # self.numy = 50
-        # self.numx = 88  # for kidney model
-        # self.numy = 75
-        try:
-            print("self.numx, self.numy = ",self.numx, self.numy )
-        except:
-            print("Error: self.numx, self.numy not defined.")
-            return
-        # nxny = numx * numy
+        # zvals = M[self.field_index,:].reshape(self.numy,self.numx)
 
-        try:
-            xgrid = M[0, :].reshape(self.numy, self.numx)
-            ygrid = M[1, :].reshape(self.numy, self.numx)
-        except:
-            print("error: cannot reshape ",self.numy, self.numx," for array ",M.shape)
-            return
 
-        zvals = M[self.field_index,:].reshape(self.numy,self.numx)
+        # rwh:------- hard code for the 3D simple_vessel model for now
+        Nz=5
+        Ny=10
+        Nx=50
+        # grid2D = M[self.field_index,:].reshape(Nz,Ny,Nx)
+        substrate = M[0,:].reshape(Nz,Ny,Nx)
+
+        # print('substrate min,max= ',substrate.min(),substrate.max())
+        # print('substrate[2,:,:] min,max= ',substrate[2,:,:].min(),substrate[2,:,:].max())
+
+        #  x:[-500,500], y:[-100,100], z:[-50,50]
+        xgrid = substrate[0,0,:]
+        print('xgrid= ',xgrid)
+        # xvec=  [-490. -470. -450.  ... 490]
+        print('len(xgrid)= ',len(xgrid))  # 50
+        # print('type(xvec)= ',type(xvec))  # 
+        # ygrid = substrate[0,:,0]
+        ygrid = np.array([-80, -60, -40, -20, -10, 10, 20, 40, 60, 80])
+        print('ygrid= ',ygrid)  # 10
+        print('len(ygrid)= ',len(ygrid))
+        num_contours = 10
+        substrate = M[self.field_index,:].reshape(Nz,Ny,Nx)
+        print("min,max of substrate slice= ",substrate.min(),substrate.max())
+        # zvals = M[self.field_index,:].reshape(Nz,Ny,Nx)
 
         contour_ok = True
 
@@ -1430,13 +1444,17 @@ class Vis(QWidget):
             try:
                 # self.fixed_contour_levels = MaxNLocator(nbins=self.num_contours).tick_values(self.cmin_value, self.cmax_value)
                 # substrate_plot = self.ax0.contourf(xgrid, ygrid, M[self.field_index, :].reshape(self.numy, self.numx), levels=levels, extend='both', cmap=self.colormap_dd.value, fontsize=self.fontsize)
-                substrate_plot = self.ax0.contourf(xgrid, ygrid, zvals, self.num_contours, levels=self.fixed_contour_levels, extend='both', cmap='viridis')
+                # substrate_plot = self.ax0.contourf(xgrid, ygrid, zvals, self.num_contours, levels=self.fixed_contour_levels, extend='both', cmap='viridis')
+
+                substrate_plot = self.ax0.contourf(xgrid, ygrid, substrate[2,:,:], self.num_contours, levels=self.fixed_contour_levels, extend='both', cmap='viridis')
+
             except:
                 contour_ok = False
                 print('got error on contourf with fixed cmap range.')
         else:    
             try:
-                substrate_plot = self.ax0.contourf(xgrid, ygrid, zvals, self.num_contours, cmap='viridis')  # self.colormap_dd.value)
+                # substrate_plot = self.ax0.contourf(xgrid, ygrid, zvals, self.num_contours, cmap='viridis')  # self.colormap_dd.value)
+                substrate_plot = self.ax0.contourf(xgrid, ygrid, substrate[2,:,:], self.num_contours, cmap='viridis')
             except:
                 contour_ok = False
                 print('got error on contourf with dynamic cmap range.')
