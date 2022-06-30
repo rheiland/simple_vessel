@@ -172,34 +172,57 @@ void setup_tissue( void )
     double sphere_radius = 30.0;
     int nV = 0;
 
-	for( int k=0; k < cell_definitions_by_index.size() ; k++ )
-	{
-		Cell_Definition* pCD = cell_definitions_by_index[k]; 
-		std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
-		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
-		{
-			std::vector<double> position = {0,0,0}; 
-			// position[0] = Xmin + UniformRandom()*Xrange; 
-			// position[1] = Ymin + UniformRandom()*Yrange; 
-			// position[2] = Zmin + UniformRandom()*Zrange; 
+    Cell_Definition* pCD = cell_definitions_by_index[0]; 
+    // Cell_Definition* pCD = cell_definitions_by_name("cancer cell");
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
+    for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
+    {
+        std::vector<double> position = {0,0,0}; 
+        // position[0] = Xmin + UniformRandom()*Xrange; 
+        // position[1] = Ymin + UniformRandom()*Yrange; 
+        // position[2] = Zmin + UniformRandom()*Zrange; 
 
-            // sprinkle some cells near the end of the cylinder/vessel
-			double xval = cyl_end_xval + UniformRandom()*sphere_radius; 
-			double yval = UniformRandom()*sphere_radius; 
-			double zval = UniformRandom()*sphere_radius; 
-			position[0] = xval;
-			position[1] = yval; 
-			position[2] = zval; 
-		    std::cout << xval<<", "<< yval<<", "<< zval<<std::endl; 
-			
-			pC = create_cell( *pCD ); 
-			pC->assign_position( position );
+        // sprinkle some cells near the end of the cylinder/vessel
+        double xval = cyl_end_xval + UniformRandom()*sphere_radius; 
+        double yval = UniformRandom()*sphere_radius; 
+        double zval = UniformRandom()*sphere_radius; 
+        position[0] = xval;
+        position[1] = yval; 
+        position[2] = zval; 
+        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl; 
+        
+        pC = create_cell( *pCD ); 
+        pC->assign_position( position );
 
-            int m = microenvironment.nearest_voxel_index( position );
-            microenvironment(m)[nV] = 32.0;
-		}
-	}
+        int m = microenvironment.nearest_voxel_index( position );
+        microenvironment(m)[nV] = 32.0;
+    }
 	std::cout << std::endl; 
+
+
+    double cyl_x0 = parameters.doubles("cyl_x0");
+    cyl_x0 = -200.0;
+    pCD = cell_definitions_by_index[1]; 
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
+    for( int n = 0 ; n < 40; n++ )
+    {
+        std::vector<double> position = {0,0,0}; 
+        // position[0] = Xmin + UniformRandom()*Xrange; 
+        // position[1] = Ymin + UniformRandom()*Yrange; 
+        // position[2] = Zmin + UniformRandom()*Zrange; 
+
+        // sprinkle some cells near the end of the cylinder/vessel
+        double xval = cyl_x0 + n*10; 
+        double yval = 0.0; 
+        double zval = 0.0; 
+        position[0] = xval;
+        position[1] = yval; 
+        position[2] = zval; 
+        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl; 
+        
+        pC = create_cell( *pCD ); 
+        pC->assign_position( position );
+    }
 	
 	// load cells from your CSV file (if enabled)
 	load_cells_from_pugixml(); 	
