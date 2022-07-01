@@ -259,7 +259,7 @@
           </death>
 
           <volume>
-            <total units="micron^3">1000</total>
+            <total units="micron^3">2494</total>
             <fluid_fraction units="dimensionless">0.75</fluid_fraction>
             <nuclear units="micron^3">540</nuclear>
             <fluid_change_rate units="1/min">0.0</fluid_change_rate>
@@ -271,8 +271,8 @@
           </volume>
 
           <mechanics>
-            <cell_cell_adhesion_strength units="micron/min">0.0</cell_cell_adhesion_strength>
-            <cell_cell_repulsion_strength units="micron/min">0</cell_cell_repulsion_strength>
+            <cell_cell_adhesion_strength units="micron/min">0.4</cell_cell_adhesion_strength>
+            <cell_cell_repulsion_strength units="micron/min">10.0</cell_cell_repulsion_strength>
             <relative_maximum_adhesion_distance units="dimensionless">1.25</relative_maximum_adhesion_distance>
             <cell_adhesion_affinities>
                 <cell_adhesion_affinity name="cancer_cell">1.0</cell_adhesion_affinity>
