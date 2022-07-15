@@ -69,196 +69,153 @@
 
 void create_cell_types( void )
 {
-	// set the random seed
-	SeedRandom( parameters.ints("random_seed") );
-
-	/*
-	   Put any modifications to default cell definition here if you
-	   want to have "inherited" by other cell types.
-
-	   This is a good place to set default functions.
-	*/
-
-	initialize_default_cell_definition();
-	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment );
-
+	// set the random seed 
+	SeedRandom( parameters.ints("random_seed") );  
+	
+	/* 
+	   Put any modifications to default cell definition here if you 
+	   want to have "inherited" by other cell types. 
+	   
+	   This is a good place to set default functions. 
+	*/ 
+	
+	initialize_default_cell_definition(); 
+	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment ); 
+	
 	cell_defaults.functions.volume_update_function = standard_volume_update_function;
 	cell_defaults.functions.update_velocity = standard_update_cell_velocity;
 
-	cell_defaults.functions.update_migration_bias = NULL;
-	cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based;
-	cell_defaults.functions.custom_cell_rule = NULL;
-	cell_defaults.functions.contact_function = NULL;
-
-	cell_defaults.functions.add_cell_basement_membrane_interactions = NULL;
-	cell_defaults.functions.calculate_distance_to_membrane = NULL;
+	cell_defaults.functions.update_migration_bias = NULL; 
+	cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based; 
+	cell_defaults.functions.custom_cell_rule = NULL; 
+	cell_defaults.functions.contact_function = NULL; 
+	
+	cell_defaults.functions.add_cell_basement_membrane_interactions = NULL; 
+	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
+	
+	/*
+	   This parses the cell definitions in the XML config file. 
+	*/
+	
+	initialize_cell_definitions_from_pugixml(); 
 
 	/*
-	   This parses the cell definitions in the XML config file.
+	   This builds the map of cell definitions and summarizes the setup. 
 	*/
-
-	initialize_cell_definitions_from_pugixml();
+		
+	build_cell_definitions_maps(); 
 
 	/*
-	   This builds the map of cell definitions and summarizes the setup.
+	   This intializes cell signal and response dictionaries 
 	*/
 
-	build_cell_definitions_maps();
+	setup_signal_behavior_dictionaries(); 	
 
+	/* 
+	   Put any modifications to individual cell definitions here. 
+	   
+	   This is a good place to set custom functions. 
+	*/ 
+	
+	cell_defaults.functions.update_phenotype = phenotype_function; 
+	cell_defaults.functions.custom_cell_rule = custom_function; 
+	cell_defaults.functions.contact_function = contact_function; 
+	
 	/*
-	   This intializes cell signal and response dictionaries
+	   This builds the map of cell definitions and summarizes the setup. 
 	*/
-
-	setup_signal_behavior_dictionaries();
-
-	/*
-	   Put any modifications to individual cell definitions here.
-
-	   This is a good place to set custom functions.
-	*/
-
-	cell_defaults.functions.update_phenotype = phenotype_function;
-	cell_defaults.functions.custom_cell_rule = custom_function;
-	cell_defaults.functions.contact_function = contact_function;
-
-	/*
-	   This builds the map of cell definitions and summarizes the setup.
-	*/
-
-	display_cell_definitions( std::cout );
-
-	return;
+		
+	display_cell_definitions( std::cout ); 
+	
+	return; 
 }
 
 void setup_microenvironment( void )
 {
-	// set domain parameters
-
-	// put any custom code to set non-homogeneous initial conditions or
-	// extra Dirichlet nodes here.
-
-	// initialize BioFVM
-
-	initialize_microenvironment();
-
-	return;
+	// set domain parameters 
+	
+	// put any custom code to set non-homogeneous initial conditions or 
+	// extra Dirichlet nodes here. 
+	
+	// initialize BioFVM 
+	
+	initialize_microenvironment(); 	
+	
+	return; 
 }
 
 void setup_tissue( void )
 {
-	double Xmin = microenvironment.mesh.bounding_box[0];
-	double Ymin = microenvironment.mesh.bounding_box[1];
-	double Zmin = microenvironment.mesh.bounding_box[2];
+	double Xmin = microenvironment.mesh.bounding_box[0]; 
+	double Ymin = microenvironment.mesh.bounding_box[1]; 
+	double Zmin = microenvironment.mesh.bounding_box[2]; 
 
-	double Xmax = microenvironment.mesh.bounding_box[3];
-	double Ymax = microenvironment.mesh.bounding_box[4];
-	double Zmax = microenvironment.mesh.bounding_box[5];
-
+	double Xmax = microenvironment.mesh.bounding_box[3]; 
+	double Ymax = microenvironment.mesh.bounding_box[4]; 
+	double Zmax = microenvironment.mesh.bounding_box[5]; 
+	
 	if( default_microenvironment_options.simulate_2D == true )
 	{
-		Zmin = 0.0;
-		Zmax = 0.0;
+		Zmin = 0.0; 
+		Zmax = 0.0; 
 	}
-
-	double Xrange = Xmax - Xmin;
-	double Yrange = Ymax - Ymin;
-	double Zrange = Zmax - Zmin;
-
-	// create some of each type of cell
-
+	
+	double Xrange = Xmax - Xmin; 
+	double Yrange = Ymax - Ymin; 
+	double Zrange = Zmax - Zmin; 
+	
 	Cell* pC;
+	
+    std::string vessel_x0 = parameters.strings("vessel_x0");
+    std::cout <<"--------- vessel_x0 = " << vessel_x0 << std::endl;
 
-    double cyl_end_xval = parameters.doubles("cyl_x1");  // get from user_params in .xml
+    double cyl_x1 = parameters.doubles("cyl_x1");
     double sphere_radius = 30.0;
     int nV = 0;
 
-    Cell_Definition* pCD = cell_definitions_by_index[0];
-    // Cell_Definition* pCD = cell_definitions_by_name("cancer cell");
-    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
+    Cell_Definition* pCD = find_cell_definition("cancer_cell");
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
+    std::vector<double> position = {0,0,0}; 
     for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
     {
-        std::vector<double> position = {0,0,0};
-        // position[0] = Xmin + UniformRandom()*Xrange;
-        // position[1] = Ymin + UniformRandom()*Yrange;
-        // position[2] = Zmin + UniformRandom()*Zrange;
-
         // sprinkle some cells near the end of the cylinder/vessel
-        double xval = cyl_end_xval + UniformRandom()*sphere_radius;
-        double yval = UniformRandom()*sphere_radius;
-        double zval = UniformRandom()*sphere_radius;
+        double xval = cyl_x1 + UniformRandom()*sphere_radius; 
+        double yval = UniformRandom()*sphere_radius; 
+        double zval = UniformRandom()*sphere_radius; 
         position[0] = xval;
-        position[1] = yval;
-        position[2] = zval;
-        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl;
-
-        pC = create_cell( *pCD );
+        position[1] = yval; 
+        position[2] = zval; 
+        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl; 
+        
+        pC = create_cell( *pCD ); 
         pC->assign_position( position );
 
+        // modify the oxygen voxel value
         int m = microenvironment.nearest_voxel_index( position );
         microenvironment(m)[nV] = 32.0;
     }
-	std::cout << std::endl;
+	std::cout << std::endl; 
 
 
-    //double cyl_x0 = parameters.doubles("cyl_x0"); commented out randy code for axis-aligned vessel
-    //double cyl_x1 = parameters.doubles("cyl_x1");
-
-    // added lines to read vessel data from string parameters
-
-		//std::list<std::string> str_vessel_list = parameters.strings("vessel_list")
-		//std::string str_vessel = for(i = 0; i < str_vessel_list.length(); str_vessel[i++] = parameters.strings("vessel_"+[i++])));
-		int vessel_number = parameters.strings.parameters.size();
-		std::cout <<"vessel_number = "<<vessel_number<<std::endl;
-
-		for( int i = 0 ; i < vessel_number; i++ )
+    pCD = find_cell_definition( "endothelial" );
+    double cyl_x0 = parameters.doubles("cyl_x0");
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
+    double xval = cyl_x0;
+    position = {0,0,0}; 
+    while(xval < cyl_x1)
     {
-		std::string vessel_n = std::to_string(i+1);
-		std::string str_vessel = parameters.strings("vessel_" + vessel_n);
-    std::vector<double> vessel;
-    std::stringstream s_stream(str_vessel);
-    while (s_stream.good()){
-        std::string substr;
-        std::getline(s_stream,substr,',');
-        double value = std::stod(substr);
-        vessel.push_back(value);
-    }
-
-    double cyl_x0 = vessel[0];
-    double cyl_y0 = vessel[1];
-    double cyl_z0 = vessel[2];
-    double cyl_x1 = vessel[3];
-    double cyl_y1 = vessel[4];
-    double cyl_z1 = vessel[5];
-    double dist = std::pow((cyl_x1-cyl_x0)*(cyl_x1-cyl_x0)+(cyl_y1-cyl_y0)*(cyl_y1-cyl_y0)+(cyl_z1-cyl_z0)*(cyl_z1-cyl_z0),0.5);
-    int nn = dist/10;
-    //cyl_x0 = -200.0;
-    pCD = cell_definitions_by_index[1];
-    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for( int n = 0 ; n < nn; n++ )
-    {
-        std::vector<double> position = {0,0,0};
-        // position[0] = Xmin + UniformRandom()*Xrange;
-        // position[1] = Ymin + UniformRandom()*Yrange;
-        // position[2] = Zmin + UniformRandom()*Zrange;
-
-        // Add cells along cylinder/vessel
-        double xval = cyl_x0 + n*((cyl_x1-cyl_x0)/nn);
-        double yval = cyl_y0 + n*((cyl_y1-cyl_y0)/nn);
-        double zval = cyl_z0 + n*((cyl_z1-cyl_z0)/nn);
         position[0] = xval;
-        position[1] = yval;
-        position[2] = zval;
-        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl;
-
-        pC = create_cell( *pCD );
+        std::cout << "x= " << xval<< std::endl; 
+        
+        pC = create_cell( *pCD ); 
         pC->assign_position( position );
+        xval += 10.0;   // hardcode size of cell; fix later
     }
-    }
-
+	
 	// load cells from your CSV file (if enabled)
-	load_cells_from_pugixml();
-
-	return;
+	load_cells_from_pugixml(); 	
+	
+	return; 
 }
 
 std::vector<std::string> my_coloring_function( Cell* pCell )
@@ -268,7 +225,7 @@ void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt )
 { return; }
 
 void custom_function( Cell* pCell, Phenotype& phenotype , double dt )
-{ return; }
+{ return; } 
 
 void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt )
-{ return; }
+{ return; } 
