@@ -1753,7 +1753,14 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		dTemp = (double) pCell->ID;
 		fwrite( (char*) &(dTemp) , sizeof(double) , 1 , fp ); 
 		// name = "position"; 
-		fwrite( (char*) &( pCell->position ) , sizeof(double) , 3 , fp ); 
+		// fwrite( (char*) &( pCell->position ) , sizeof(double) , 3 , fp ); 
+            fwrite( (char*) &( pCell->position[0] ) , sizeof(double) , 1 , fp ); 
+			fwrite( (char*) &( pCell->position[1] ) , sizeof(double) , 1 , fp ); 
+			fwrite( (char*) &( pCell->position[2] ) , sizeof(double) , 1 , fp ); 
+
+//rwh:
+        // std::cout << "add_PhysiCell_cells_to_open_xml_pugi_v2(): rwh:  x,y,z= " << pCell->position[0] << ", " << pCell->position[1] << ", " << pCell->position[2] << std::endl;
+
 		// name = "total_volume"; 
 		fwrite( (char*) &( pCell->phenotype.volume.total ) , sizeof(double) , 1 , fp ); 
 		// name = "cell_type"; 

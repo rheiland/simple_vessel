@@ -144,6 +144,35 @@ void setup_microenvironment( void )
 	return;
 }
 
+void setup_tissue_rwh( void )
+{
+	Cell* pC;
+    Cell_Definition* pCD = cell_definitions_by_index[0];
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
+        std::vector<double> position = {0,0,0};
+        double xval = 1.0;
+        double yval = 0.;
+        double zval = 0.;
+        position[0] = xval;
+        position[1] = yval;
+        position[2] = zval;
+        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl;
+        pC = create_cell( *pCD );
+        pC->assign_position( position );
+
+    pCD = cell_definitions_by_index[1];
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
+        xval = -1.0;
+        yval = 0.;
+        zval = 0.;
+        position[0] = xval;
+        position[1] = yval;
+        position[2] = zval;
+        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl;
+        pC = create_cell( *pCD );
+        pC->assign_position( position );
+}
+
 void setup_tissue( void )
 {
 	double Xmin = microenvironment.mesh.bounding_box[0];
@@ -231,6 +260,7 @@ void setup_tissue( void )
     double cyl_z1 = vessel[5];
     double dist = std::pow((cyl_x1-cyl_x0)*(cyl_x1-cyl_x0)+(cyl_y1-cyl_y0)*(cyl_y1-cyl_y0)+(cyl_z1-cyl_z0)*(cyl_z1-cyl_z0),0.5);
     int nn = dist/10;
+    nn = dist/20;
     //cyl_x0 = -200.0;
     pCD = cell_definitions_by_index[1];
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
@@ -247,8 +277,8 @@ void setup_tissue( void )
         double zval = cyl_z0 + n*((cyl_z1-cyl_z0)/nn);
         position[0] = xval;
         position[1] = yval;
-        position[2] = zval;
-        std::cout << xval<<", "<< yval<<", "<< zval<<std::endl;
+        // position[2] = zval;
+        std::cout << n << ") " << xval<<", "<< yval<<", "<< zval<<std::endl;
 
         pC = create_cell( *pCD );
         pC->assign_position( position );

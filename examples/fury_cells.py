@@ -4,6 +4,8 @@
 # Randy Heiland
 
 from pyMCDS_cells import pyMCDS_cells
+#from pyMCDS import pyMCDS
+# from pyMCDS_1 import pyMCDS
 import numpy as np
 from fury import window, actor, ui
 
@@ -12,11 +14,12 @@ from fury import window, actor, ui
 #mcds = pyMCDS_cells('output00000246.xml','.')  # 116038 cells
 #mcds = pyMCDS_cells('output00000001.xml','.')  
 mcds = pyMCDS_cells('output00000000.xml','.')  
+# mcds = pyMCDS('output00000000.xml','.')  
 tmins = mcds.get_time()
 print('time (mins)=',tmins)
 print('time (days)=',tmins/1440.)
 
-print(mcds.data['discrete_cells'].keys())
+# print(mcds.data['discrete_cells'].keys())
 #Out[7]: dict_keys(['ID', 'position_x', 'position_y', 'position_z', 'total_volume', 'cell_type', 'cycle_model', 'current_phase', 'elapsed_time_in_phase', 'nuclear_volume', 'cytoplasmic_volume', 'fluid_fraction', 'calcified_fraction', 'orientation_x', 'orientation_y', 'orientation_z', 'polarity', 'migration_speed', 'motility_vector_x', 'motility_vector_y', 'motility_vector_z', 'migration_bias', 'motility_bias_direction_x', 'motility_bias_direction_y', 'motility_bias_direction_z', 'persistence_time', 'motility_reserved', 'oncoprotein', 'elastic_coefficient', 'kill_rate', 'attachment_lifetime', 'attachment_rate'])
 
 # http://www.mathcancer.org/blog/paraview-for-physicell-part-1/
@@ -33,16 +36,19 @@ print(mcds.data['discrete_cells'].keys())
 # if val[7,idx] > 100 and val[7,idx] < 104:
 #   sval = 2   # necrotic: brownish
 
+# print(mcds.data['discrete_cells']['ID'])
 ncells = len(mcds.data['discrete_cells']['ID'])
 print('num cells originally = ',ncells)
 
 #xyz = np.empty((ncells,3))
 xyz = np.zeros((ncells,3))
 xvals = mcds.data['discrete_cells']['position_x']
+# print(mcds.data['discrete_cells']['position_x'])
 yvals = mcds.data['discrete_cells']['position_y']
 zvals = mcds.data['discrete_cells']['position_z']
 print("x range: ",xvals.min(),xvals.max())
 print("y range: ",yvals.min(),yvals.max())
+print("z range: ",zvals.min(),zvals.max())
 
 # lets just extract half of the spheroid of tumor cells
 # idx_keep = np.where(zvals < 0.0)
@@ -58,8 +64,8 @@ xyz =np.transpose(np.array([xvals,yvals,zvals]))
 # r3 = V * 0.75 / pi
 # r = np.cbrt(r3)
 cell_radii = mcds.data['discrete_cells']['total_volume'] * 0.75 / np.pi
-# cell_radii = np.cbrt(cell_radii)
-cell_radii = np.cbrt(cell_radii)/10.
+cell_radii = np.cbrt(cell_radii)
+# cell_radii = np.cbrt(cell_radii)/10.
 # cell_radii = cell_radii[idx_keep]
 
 cell_type = mcds.data['discrete_cells']['cell_type']
@@ -95,29 +101,16 @@ cell_type = mcds.data['discrete_cells']['cell_type']
 
 print('cell_phase min, max= ',cell_phase.min(),cell_phase.max())  # e.g., 14.0 100.0
 
-# This coloring is only approximately correct, but at least it shows variation in cell colors
+# color how you want
 for idx in range(ncells):
-    if cell_type[idx] == 1:
+    if cell_type[idx] == 0:
         rgb[idx,0] = 1
         rgb[idx,1] = 1
         rgb[idx,2] = 0
-        # self.yval1 = np.array( [(np.count_nonzero((mcds[idx].data['discrete_cells']['cell_type'] == 1) & (mcds[idx].data['discrete_cells']['cycle_model'] < 100) == True)) for idx in range(ds_count)] )
-    if cycle_model[idx] < 100:
-        rgb[idx,0] = 0.5
-        # rgb[idx,1] = 0.5
-        # rgb[idx,0] = 1.0 - (onco[idx] - onco_min)/onco_range
-        # rgb[idx,1] = (onco[idx] - onco_min)/onco_range
-        rgb[idx,1] = rgb[idx,0]
-        rgb[idx,2] = 0
-    elif cycle_model[idx] == 100:
+    else:
         rgb[idx,0] = 1
         rgb[idx,1] = 0
         rgb[idx,2] = 0
-    elif cycle_model[idx] > 100:
-        rgb[idx,0] = 0.54   # 139./255
-        rgb[idx,1] = 0.27   # 69./255
-        rgb[idx,2] = 0.075  # 19./255
-
 #-----------------------------
 scene = window.Scene()
 
