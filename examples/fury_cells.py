@@ -10,7 +10,8 @@ from fury import window, actor, ui
 #mcds = pyMCDS_cells('output00000001.xml','data')
 #mcds = pyMCDS_cells('output00000001.xml','.') #  23123 cells
 #mcds = pyMCDS_cells('output00000246.xml','.')  # 116038 cells
-mcds = pyMCDS_cells('output00000001.xml','.')  
+#mcds = pyMCDS_cells('output00000001.xml','.')  
+mcds = pyMCDS_cells('output00000000.xml','.')  
 tmins = mcds.get_time()
 print('time (mins)=',tmins)
 print('time (days)=',tmins/1440.)
