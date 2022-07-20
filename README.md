@@ -2,9 +2,18 @@
 
 Clone this repo (or use a release). From the root directory:
 
+Generate the desired config file (.xml):
+```
+cd data  # from root dir
+python generate_simple_vessel.py
+# select the "simple_network.csv" in this same dir
+# script will generate "simple_test.xml"
+cp simple_test.xml simple_vessel.xml
+```
+
 Build the model's executable:
 ```
-cd src
+cd src   # from root dir
 make -j2
 ```
 
