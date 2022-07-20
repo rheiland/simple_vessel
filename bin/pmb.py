@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 import getopt
-import shutil
+# import shutil # for possible copy of file
 from pathlib import Path
 import xml.etree.ElementTree as ET  # https://docs.python.org/2/library/xml.etree.elementtree.html
 from xml.dom import minidom
@@ -29,6 +29,7 @@ from config_tab import Config
 from cell_def_tab import CellDef 
 from microenv_tab import SubstrateDef 
 from user_params_tab import UserParams 
+from rules_tab import Rules
 from populate_tree_cell_defs import populate_tree_cell_defs
 from run_tab import RunModel 
 from vis_tab import Vis 
@@ -45,10 +46,17 @@ def SingleBrowse(self):
         # print(self.csv)
   
 class PhysiCellXMLCreator(QWidget):
-    def __init__(self, studio_flag, parent = None):
+    def __init__(self, studio_flag, rules_flag, parent = None):
         super(PhysiCellXMLCreator, self).__init__(parent)
 
         self.studio_flag = studio_flag 
+        self.rules_flag = rules_flag 
+
+        self.plot_tab_index = 5
+        self.legend_tab_index = 6
+        if self.rules_flag:
+            self.plot_tab_index = 6
+            self.legend_tab_index = 7
 
         self.dark_mode = False
         # if (platform.system().lower() == 'darwin') and ("ARM64" in platform.uname().version):
@@ -74,31 +82,22 @@ class PhysiCellXMLCreator(QWidget):
         self.resize(1100, 770)  # width, height (height >= Cell Types|Death params)
         self.setMinimumSize(1100, 770)  #width, height of window
 
-        # model_name = "interactions"  # for testing latest xml
-        # model_name = "template"
+        self.homedir = os.getcwd()
+        print("model.py: self.homedir = ",self.homedir)
+
         model_name = "simple_vessel"
-        # model_name = "test1"
 
-        # then what??
-        # binDirectory = os.path.realpath(os.path.abspath(__file__))
-        binDirectory = os.path.dirname(os.path.abspath(__file__))
-        dataDirectory = os.path.join(binDirectory,'..','data')
+        # bin_dir = os.path.dirname(os.path.abspath(__file__))
+        # data_dir = os.path.join(bin_dir,'..','data')
+        # data_dir = os.path.normpath(data_dir)
+        data_dir = os.path.join(self.homedir,'data')
 
-        # read_file = model_name + ".xml"
-        read_file = os.path.join(dataDirectory, model_name + ".xml")
-        # self.setWindowTitle(self.title_prefix + model_name)
+        self.current_xml_file = os.path.join(data_dir, model_name + ".xml")
 
+        # NOTE! We operate *directly* on a default .xml file, not a copy.
 
-        # NOTE! We create a *copy* of the .xml sample model and will save to it.
-        copy_file = "copy_" + model_name + ".xml"
-        self.current_save_file = copy_file
-        try:
-            shutil.copy(read_file, copy_file)
-        except:
-            print("Warning: unable to copy ",read_file," to ",copy_file, "(it may already exist)")
-
-        self.setWindowTitle(self.title_prefix + copy_file)
-        self.config_file = copy_file  # to Save
+        self.setWindowTitle(self.title_prefix + self.current_xml_file)
+        self.config_file = self.current_xml_file  # to Save
 
         self.tree = ET.parse(self.config_file)
         self.xml_root = self.tree.getroot()
@@ -125,6 +124,7 @@ class PhysiCellXMLCreator(QWidget):
         cd_name = self.celldef_tab.first_cell_def_name()
         print("pmb.py: cd_name=",cd_name)
         # self.celldef_tab.populate_tree()
+        self.celldef_tab.config_path = self.current_xml_file
         populate_tree_cell_defs(self.celldef_tab)
         self.celldef_tab.fill_substrates_comboboxes() # do before populate?
         self.celldef_tab.fill_celltypes_comboboxes()
@@ -173,10 +173,16 @@ class PhysiCellXMLCreator(QWidget):
         self.homedir = os.getcwd()
         print("model.py: self.homedir = ",self.homedir)
 
+        if self.rules_flag:
+            self.rules_tab = Rules(self.microenv_tab,self.celldef_tab)
+            self.rules_tab.fill_gui()
+            self.tabWidget.addTab(self.rules_tab,"Rules")
+
         if self.studio_flag:
             print("studio.py: creating Run and Plot tabs")
             self.run_tab = RunModel(self.nanohub_flag, self.tabWidget, self.download_menu)
-            self.run_tab.config_xml_name.setText(copy_file)
+            # self.run_tab.config_xml_name.setText(current_xml_file)
+            self.run_tab.config_xml_name.setText(self.current_xml_file)
             # self.homedir = os.getcwd()
             self.run_tab.homedir = self.homedir
             self.run_tab.config_tab = self.config_tab
@@ -185,8 +191,8 @@ class PhysiCellXMLCreator(QWidget):
             self.run_tab.user_params_tab = self.user_params_tab
             self.run_tab.tree = self.tree
 
-            self.run_tab.config_file = copy_file
-            self.run_tab.config_xml_name.setText(copy_file)
+            self.run_tab.config_file = self.current_xml_file
+            self.run_tab.config_xml_name.setText(self.current_xml_file)
 
             self.tabWidget.addTab(self.run_tab,"Run")
 
@@ -225,10 +231,13 @@ class PhysiCellXMLCreator(QWidget):
 
 
     def enablePlotTab(self, bval):
-        self.tabWidget.setTabEnabled(5, bval)
+        # self.tabWidget.setTabEnabled(5, bval)
+        self.tabWidget.setTabEnabled(self.plot_tab_index, bval)
 
     def enableLegendTab(self, bval):
-        self.tabWidget.setTabEnabled(6, bval)   
+        # self.tabWidget.setTabEnabled(6, bval)   
+        # self.tabWidget.setTabEnabled(6, bval)   
+        self.tabWidget.setTabEnabled(self.legend_tab_index, bval)
 
 
     def menu(self):
@@ -245,47 +254,47 @@ class PhysiCellXMLCreator(QWidget):
         file_menu.addAction("Save", self.save_cb, QtGui.QKeySequence('Ctrl+s'))
 
         #--------------
-        # samples_menu = file_menu.addMenu("Samples (copy of)")
+        samples_menu = file_menu.addMenu("Samples (copy of)")
 
-        # template_act = QAction('template', self)
-        # samples_menu.addAction(template_act)
-        # template_act.triggered.connect(self.template_cb)
+        template_act = QAction('template', self)
+        samples_menu.addAction(template_act)
+        template_act.triggered.connect(self.template_cb)
 
-        # biorobots_act = QAction('biorobots', self)
-        # samples_menu.addAction(biorobots_act)
-        # biorobots_act.triggered.connect(self.biorobots_cb)
+        biorobots_act = QAction('biorobots', self)
+        samples_menu.addAction(biorobots_act)
+        biorobots_act.triggered.connect(self.biorobots_cb)
 
-        # cancer_biorobots_act = QAction('cancer biorobots', self)
-        # samples_menu.addAction(cancer_biorobots_act)
-        # cancer_biorobots_act.triggered.connect(self.cancer_biorobots_cb)
+        cancer_biorobots_act = QAction('cancer biorobots', self)
+        samples_menu.addAction(cancer_biorobots_act)
+        cancer_biorobots_act.triggered.connect(self.cancer_biorobots_cb)
 
-        # hetero_act = QAction('heterogeneity', self)
-        # samples_menu.addAction(hetero_act)
-        # hetero_act.triggered.connect(self.hetero_cb)
+        hetero_act = QAction('heterogeneity', self)
+        samples_menu.addAction(hetero_act)
+        hetero_act.triggered.connect(self.hetero_cb)
 
-        # pred_prey_act = QAction('predator-prey-farmer', self)
-        # samples_menu.addAction(pred_prey_act)
-        # pred_prey_act.triggered.connect(self.pred_prey_cb)
+        pred_prey_act = QAction('predator-prey-farmer', self)
+        samples_menu.addAction(pred_prey_act)
+        pred_prey_act.triggered.connect(self.pred_prey_cb)
 
-        # virus_mac_act = QAction('virus-macrophage', self)
-        # samples_menu.addAction(virus_mac_act)
-        # virus_mac_act.triggered.connect(self.virus_mac_cb)
+        virus_mac_act = QAction('virus-macrophage', self)
+        samples_menu.addAction(virus_mac_act)
+        virus_mac_act.triggered.connect(self.virus_mac_cb)
 
-        # worm_act = QAction('worm', self)
-        # samples_menu.addAction(worm_act)
-        # worm_act.triggered.connect(self.worm_cb)
+        worm_act = QAction('worm', self)
+        samples_menu.addAction(worm_act)
+        worm_act.triggered.connect(self.worm_cb)
 
-        # interactions_act = QAction('interactions', self)
-        # samples_menu.addAction(interactions_act)
-        # interactions_act.triggered.connect(self.interactions_cb)
+        interactions_act = QAction('interactions', self)
+        samples_menu.addAction(interactions_act)
+        interactions_act.triggered.connect(self.interactions_cb)
 
-        # cancer_immune_act = QAction('cancer immune (3D)', self)
-        # samples_menu.addAction(cancer_immune_act)
-        # cancer_immune_act.triggered.connect(self.cancer_immune_cb)
+        cancer_immune_act = QAction('cancer immune (3D)', self)
+        samples_menu.addAction(cancer_immune_act)
+        cancer_immune_act.triggered.connect(self.cancer_immune_cb)
 
-        # physiboss_cell_lines_act = QAction('PhysiBoSS cell lines', self)
-        # samples_menu.addAction(physiboss_cell_lines_act)
-        # physiboss_cell_lines_act.triggered.connect(self.physiboss_cell_lines_cb)
+        physiboss_cell_lines_act = QAction('PhysiBoSS cell lines', self)
+        samples_menu.addAction(physiboss_cell_lines_act)
+        physiboss_cell_lines_act.triggered.connect(self.physiboss_cell_lines_cb)
 
         subcell_act = QAction('subcellular', self)
         # samples_menu.addAction(subcell_act)
@@ -298,28 +307,6 @@ class PhysiCellXMLCreator(QWidget):
         test_gui_act = QAction('test-gui', self)
         # samples_menu.addAction(test_gui_act)
         test_gui_act.triggered.connect(self.test_gui_cb)
-
-        #--------------
-        # file_menu.addAction(open_act)
-        # file_menu.addAction(recent_act)
-        # file_menu.addAction(save_act)
-        # file_menu.addAction(save_act, self.save_act, QtGui.QKeySequence("Ctrl+s"))
-        # file_menu.addAction(saveas_act)
-
-
-        #--------------
-        # self.models_menu = menubar.addMenu('&Models')
-        # models_menu_act = QAction('-----', self)
-        # self.models_menu.addAction(models_menu_act)
-        # models_menu_act.triggered.connect(self.select_current_model_cb)
-        # # self.models_menu.addAction('Load sample', self.select_current_model_cb)
-
-        #--------------
-        # self.tools_menu = menubar.addMenu('&Tools')
-        # validate_act = QAction('Validate', self)
-        # self.tools_menu.addAction(validate_act)
-        # validate_act.triggered.connect(self.validate_cb)
-        # self.tools_menu.setEnabled(False)
 
         if self.nanohub_flag:
             self.download_menu = file_menu.addMenu('Download')
@@ -336,21 +323,21 @@ class PhysiCellXMLCreator(QWidget):
 
     #-----------------------------------------------------------------
     # Not currently used
-    def add_new_model(self, name, read_only):
-        # does it already exist? If so, return
-        if name in self.model.keys():
-            print("add_new_model: model already exists, just return (dict)= ",self.model)
-            return
-        self.model[name] = read_only
-        self.num_models += 1
-        print("add_new_model: self.model (dict)= ",self.model)
+    # def add_new_model(self, name, read_only):
+    #     # does it already exist? If so, return
+    #     if name in self.model.keys():
+    #         print("add_new_model: model already exists, just return (dict)= ",self.model)
+    #         return
+    #     self.model[name] = read_only
+    #     self.num_models += 1
+    #     print("add_new_model: self.model (dict)= ",self.model)
 
-        # models_menu_act = QAction(name, self)
-        # self.models_menu.addAction(models_menu_act)
-        # models_menu_act.triggered.connect(self.select_current_model_cb)
+    #     # models_menu_act = QAction(name, self)
+    #     # self.models_menu.addAction(models_menu_act)
+    #     # models_menu_act.triggered.connect(self.select_current_model_cb)
 
-        print("add_new_model: title suffix= ",name)
-        self.setWindowTitle(self.title_prefix + name)
+    #     print("add_new_model: title suffix= ",name)
+    #     self.setWindowTitle(self.title_prefix + name)
 
     # Probably not used unless we later implement it
     # def select_current_model_cb(self):
@@ -386,6 +373,7 @@ class PhysiCellXMLCreator(QWidget):
         self.celldef_tab.clear_custom_data_params()
         # self.celldef_tab.fill_substrates_comboboxes()
         # self.celldef_tab.populate_tree()
+        self.celldef_tab.config_path = self.current_xml_file
         populate_tree_cell_defs(self.celldef_tab)
         # self.celldef_tab.fill_gui(None)
         # self.celldef_tab.customize_cycle_choices() #rwh/todo: needed? 
@@ -418,21 +406,14 @@ class PhysiCellXMLCreator(QWidget):
         if (len(full_path_model_name) > 0) and Path(full_path_model_name):
             print("open_as_cb():  filePath is valid")
             print("len(full_path_model_name) = ", len(full_path_model_name) )
-            # copy_file = "mymodel.xml"
-            fname = os.path.basename(full_path_model_name)
-            copy_file = "copy_" + fname 
-            self.current_save_file = copy_file
-            try:
-                shutil.copy(full_path_model_name, copy_file)
-            except:
-                print("\n-------- Warning: unable to copy: ",full_path_model_name, copy_file)
-                # sys.exit(1)
+            # fname = os.path.basename(full_path_model_name)
+            self.current_xml_file = full_path_model_name
 
-            self.add_new_model(copy_file, True)
-            self.config_file = copy_file
+            # self.add_new_model(self.current_xml_file, True)
+            self.config_file = self.current_xml_file
             if self.studio_flag:
-                self.run_tab.config_file = copy_file
-                self.run_tab.config_xml_name.setText(copy_file)
+                self.run_tab.config_file = self.current_xml_file
+                self.run_tab.config_xml_name.setText(self.current_xml_file)
             self.show_sample_model()
 
         else:
@@ -472,12 +453,14 @@ class PhysiCellXMLCreator(QWidget):
         if (len(full_path_model_name) > 0) and Path(full_path_model_name):
             print("save_as_cb():  filePath is valid")
             print("len(full_path_model_name) = ", len(full_path_model_name) )
-            self.current_save_file = full_path_model_name
+            # self.current_save_file = full_path_model_name
+            self.current_xml_file = full_path_model_name
         else:
             return
 
         try:
-            self.celldef_tab.config_path = self.current_save_file
+            # self.celldef_tab.config_path = self.current_save_file
+            self.celldef_tab.config_path = self.current_xml_file
             self.config_tab.fill_xml()
             self.microenv_tab.fill_xml()
             self.celldef_tab.fill_xml()
@@ -485,7 +468,8 @@ class PhysiCellXMLCreator(QWidget):
 
             # out_file = "mymodel.xml"
             # out_file = full_path_model_name 
-            out_file = self.current_save_file
+            # out_file = self.current_save_file
+            out_file = self.current_xml_file
             self.setWindowTitle(self.title_prefix + out_file)
 
             print("\n\n ===================================")
@@ -499,8 +483,9 @@ class PhysiCellXMLCreator(QWidget):
     def save_cb(self):
         
         try:
-            self.celldef_tab.config_path = self.current_save_file
-            # self.config_file = copy_file
+            # self.celldef_tab.config_path = self.current_save_file
+            self.celldef_tab.config_path = self.current_xml_file
+            self.config_file = self.current_xml_file
             self.config_tab.fill_xml()
             self.microenv_tab.fill_xml()
             self.celldef_tab.fill_xml()
@@ -511,7 +496,8 @@ class PhysiCellXMLCreator(QWidget):
 
             # out_file = self.config_file
             # out_file = "mymodel.xml"
-            out_file = self.current_save_file
+            # out_file = self.current_save_file
+            out_file = self.current_xml_file
             self.setWindowTitle(self.title_prefix + out_file)
 
             print("\n\n ===================================")
@@ -574,46 +560,28 @@ class PhysiCellXMLCreator(QWidget):
         msg.setWindowTitle("Error")
         msg.setFixedWidth(500)
         msg.exec_()
-    # def save_cb(self):
-    #     # save_as_file = QFileDialog.getSaveFileName(self,'',".")
-    #     # if save_as_file:
-    #     #     print(save_as_file)
-    #     #     print(" save_as_file: ",save_as_file) # writing to:  ('/Users/heiland/git/PhysiCell-model-builder/rwh.xml', 'All Files (*)')
-
-    #     self.config_tab.fill_xml()
-    #     self.microenv_tab.fill_xml()
-    #     self.celldef_tab.fill_xml()
-    #     self.user_params_tab.fill_xml()
-
-    #     save_as_file = "mymodel.xml"
-    #     print("pmb.py:  save_as_cb: writing to: ",save_as_file) # writing to:  ('/Users/heiland/git/PhysiCell-model-builder/rwh.xml', 'All Files (*)')
-    #     self.tree.write(save_as_file)
 
 
     def load_model(self,name):
-        # name = "template"
         if self.studio_flag:
             self.run_tab.cancel_model_cb()  # if a sim is already running, cancel it
 
         os.chdir(self.homedir)  # just in case we were in /tmpdir (and it crashed/failed, leaving us there)
-        sample_file = Path("data", name + ".xml")
-        copy_file = "copy_" + name + ".xml"
-        self.current_save_file = copy_file
-        if self.studio_flag:
-            self.run_tab.config_xml_name.setText(copy_file)
 
-        shutil.copy(sample_file, copy_file)
-        # self.add_new_model(copy_file, True)
-        self.config_file = copy_file
+        data_dir = os.path.join(self.homedir,'data')
+        self.current_xml_file = os.path.join(data_dir, name + ".xml")
+        print("load_model: self.current_xml_file= ",self.current_xml_file)
+
+        # self.current_save_file = current_xml_file
+        if self.studio_flag:
+            self.run_tab.config_xml_name.setText(self.current_xml_file)
+            self.run_tab.config_file = self.current_xml_file
+
+        self.config_file = self.current_xml_file
         self.show_sample_model()
         if self.nanohub_flag:  # rwh - test if works on nanoHUB
             self.config_tab.folder.setText('.')
-        
-    # def new_model_cb(self):
-    #     print("new_model_cb():  self.studio_flag= ",self.studio_flag)
-    #     self.load_model("template")
-    #     if self.studio_flag:
-    #         self.run_tab.exec_name.setText('./project')
+
 
     def template_cb(self):
         self.load_model("template")
@@ -661,7 +629,7 @@ class PhysiCellXMLCreator(QWidget):
             self.run_tab.exec_name.setText('./cancer_immune_3D')
 
     def physiboss_cell_lines_cb(self):
-        self.load_model("physiboss_cell_lines")
+        self.load_model("physiboss_cell_lines_flat")
         if self.studio_flag:
             self.run_tab.exec_name.setText('./PhysiBoSS_Cell_Lines')
 
@@ -773,9 +741,10 @@ class PhysiCellXMLCreator(QWidget):
 def main():
     # inputfile = ''
     studio_flag = False
+    rules_flag = False
     try:
         # opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
-        opts, args = getopt.getopt(sys.argv[1:],"hv:",["studio"])
+        opts, args = getopt.getopt(sys.argv[1:],"hv:",["studio", "rules"])
     except getopt.GetoptError:
         # print 'test.py -i <inputfile> -o <outputfile>'
         print('\ngetopt exception - usage:')
@@ -788,6 +757,8 @@ def main():
     #   elif opt in ("-i", "--ifile"):
         elif opt in ("--studio"):
             studio_flag = True
+        elif opt in ("--rules"):
+            rules_flag = True
 
     # print 'Input file is "', inputfile
     # print("show_vis_tab = ",show_vis_tab)
@@ -843,7 +814,7 @@ def main():
 
     # pmb_app.setPalette(QtGui.QGuiApplication.palette())
 
-    ex = PhysiCellXMLCreator(studio_flag)
+    ex = PhysiCellXMLCreator(studio_flag, rules_flag)
     ex.show()
     sys.exit(pmb_app.exec_())
 	
