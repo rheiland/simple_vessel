@@ -207,9 +207,11 @@ class PhysiCellXMLCreator(QWidget):
             self.tabWidget.addTab(self.vis_tab,"Plot")
             # self.tabWidget.setTabEnabled(5, False)
             self.enablePlotTab(False)
+            self.enablePlotTab(True)
 
             self.tabWidget.addTab(self.legend_tab,"Legend")
             self.enableLegendTab(False)
+            self.enableLegendTab(True)
             self.run_tab.vis_tab = self.vis_tab
             self.run_tab.legend_tab = self.legend_tab
             print("studio.py: calling vis_tab.substrates_cbox_changed_cb(2)")
