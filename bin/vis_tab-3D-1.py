@@ -742,7 +742,7 @@ class Vis(QWidget):
         mcds = pyMCDS_cells(xml_file, 'output')  
         print('time=', mcds.get_time())
 
-        # print("mcds.data dict_keys= ",mcds.data['discrete_cells'].keys())   # dict_keys(...)
+        print(mcds.data['discrete_cells'].keys())
 
         ncells = len(mcds.data['discrete_cells']['ID'])
         print('ncells=', ncells)
@@ -801,11 +801,10 @@ class Vis(QWidget):
         cellID_color_dict = {}
         # for idx in range(ncells):
         random.seed(42)
-        # for utype in unique_cell_type:
-        #     # colors.InsertTuple3(0, randint(0,255), randint(0,255), randint(0,255)) # reddish
-        #     cellID_color_dict[utype] = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
-        cellID_color_dict[0.0]=[170,170,170]  # cancer cell
-        cellID_color_dict[1.0]=[255,0,0]  # endothelial
+        for utype in unique_cell_type:
+            # colors.InsertTuple3(0, randint(0,255), randint(0,255), randint(0,255)) # reddish
+            cellID_color_dict[utype] = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
+        cellID_color_dict[0.0]=[255,255,0]  # yellow basement membrane
         print("color dict=",cellID_color_dict)
 
         colors = vtkUnsignedCharArray()
@@ -834,8 +833,7 @@ class Vis(QWidget):
 
         # using these 2 results in fixed size spheres
         glyph.SetScaleModeToDataScalingOff()  # results in super tiny spheres without 'ScaleFactor'
-        # glyph.SetScaleFactor(170)  # overall (multiplicative) scaling factor
-        glyph.SetScaleFactor(100)  # overall (multiplicative) scaling factor
+        glyph.SetScaleFactor(170)  # overall (multiplicative) scaling factor
 
         # glyph.SetScaleModeToDataScalingOn()
         # glyph.ScalingOn()
