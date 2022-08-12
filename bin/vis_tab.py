@@ -45,32 +45,73 @@ class Vis(QWidget):
 
         # VTK pipeline
         self.points = vtkPoints()
-        self.cellID = vtkFloatArray()
-        self.cellVolume = vtkFloatArray()
-        self.polydata = vtkPolyData()
-        self.colors = vtkUnsignedCharArray()
-        self.colors.SetNumberOfComponents(3)
 
-        self.polydata.GetPointData().SetScalars(self.colors)
+        # self.cellID = vtkFloatArray()
+        # self.cellID.SetName("ID")
+
+        # self.cellVolume = vtkFloatArray()
+        # self.cellVolume.SetName("volume")
+
+        self.radii = vtkFloatArray()
+        # self.radii.InsertNextValue(1.0)
+        # self.radii.InsertNextValue(0.1)
+        # self.radii.InsertNextValue(0.2)
+        self.radii.SetName("radius")
+
+        # define the colours for the spheres
+        self.tags = vtkFloatArray()
+        # self.tags.InsertNextValue(1.0)
+        # self.tags.InsertNextValue(0.5)
+        # self.tags.InsertNextValue(0.7)
+        self.tags.SetName("tag")
+
+        self.cell_data = vtkFloatArray()
+        self.cell_data.SetNumberOfComponents(2)
+        # self.cell_data.SetNumberOfComponents(1)
+        # self.cell_data.SetNumberOfTuples(3)
+        # self.cell_data.CopyComponent(0, self.radii, 0)
+        # self.cell_data.CopyComponent(1, self.tags, 0)
+        self.cell_data.SetName("cell_data")
+
+        # construct the grid
+        self.ugrid = vtkUnstructuredGrid()
+        self.ugrid.SetPoints(self.points)
+        self.ugrid.GetPointData().AddArray(self.cell_data)
+        self.ugrid.GetPointData().SetActiveScalars("cell_data")
+
+
+        # self.polydata = vtkPolyData()
+        # self.colors = vtkUnsignedCharArray()
+        # self.colors.SetNumberOfComponents(3)
+
+        # self.polydata.GetPointData().SetScalars(self.colors)
         self.sphereSource = vtkSphereSource()
         nres = 20
         self.sphereSource.SetPhiResolution(nres)
         self.sphereSource.SetThetaResolution(nres)
-        self.sphereSource.SetRadius(0.1)
+        self.sphereSource.SetRadius(1.0)  # 0.5, 1.0 ?
 
         self.glyph = vtkGlyph3D()
         self.glyph.SetSourceConnection(self.sphereSource.GetOutputPort())
-        self.glyph.SetInputData(self.polydata)
+        self.glyph.SetInputData(self.ugrid)
+        self.glyph.ClampingOff()
+        self.glyph.SetScaleModeToScaleByScalar()
+        self.glyph.SetScaleFactor(1.0)
         self.glyph.SetColorModeToColorByScalar()
+
+        # self.glyph.SetInputData(self.polydata)
+        # self.glyph.SetColorModeToColorByScalar()
         # glyph.SetScaleModeToScaleByScalar()
 
         # using these 2 results in fixed size spheres
-        self.glyph.SetScaleModeToDataScalingOff()  # results in super tiny spheres without 'ScaleFactor'
+        # self.glyph.SetScaleModeToDataScalingOff()  # results in super tiny spheres without 'ScaleFactor'
         # glyph.SetScaleFactor(170)  # overall (multiplicative) scaling factor
-        self.glyph.SetScaleFactor(100)  # overall (multiplicative) scaling factor
+        # self.glyph.SetScaleFactor(100)  # overall (multiplicative) scaling factor
 
         self.mapper = vtkPolyDataMapper()
         self.mapper.SetInputConnection(self.glyph.GetOutputPort())
+        self.mapper.ScalarVisibilityOn()
+        self.mapper.ColorByArrayComponent("cell_data", 1)
 
         self.actor = vtkActor()
         self.actor.SetMapper(self.mapper)
@@ -90,7 +131,7 @@ class Vis(QWidget):
         self.animating_flag = False
 
         self.xml_root = None
-        self.current_svg_frame = 0
+        self.current_frame = 0
         self.timer = QtCore.QTimer()
         # self.t.timeout.connect(self.task)
         self.timer.timeout.connect(self.play_plot_cb)
@@ -374,10 +415,10 @@ class Vis(QWidget):
     def update_plots(self):
         # self.ax0.cla()
         # if self.substrates_checked_flag:
-        #     self.plot_substrate(self.current_svg_frame)
-        self.plot_cells3D(self.current_svg_frame)
+        #     self.plot_substrate(self.current_frame)
+        self.plot_cells3D(self.current_frame)
         # if self.cells_checked_flag:
-        #     self.plot_svg(self.current_svg_frame)
+        #     self.plot_svg(self.current_frame)
 
         # self.canvas.update()
         # self.canvas.draw()
@@ -482,7 +523,7 @@ class Vis(QWidget):
 
 
         # and plot 1st frame (.svg)
-        self.current_svg_frame = 0
+        self.current_frame = 0
         # self.forward_plot_cb("")  
 
     def reset_axes(self):
@@ -514,7 +555,7 @@ class Vis(QWidget):
         self.y_range = self.ymax - self.ymin
 
         # and plot 1st frame (.svg)
-        self.current_svg_frame = 0
+        self.current_frame = 0
         # self.forward_plot_cb("")  
 
 
@@ -527,10 +568,11 @@ class Vis(QWidget):
             self.reset_model()
             self.reset_model_flag = False
 
-        self.current_svg_frame = 0
+        self.current_frame = 0
         self.update_plots()
 
     def last_plot_cb(self, text):
+        print("------last_plot_cb()")
         if self.reset_model_flag:
             self.reset_model()
             self.reset_model_flag = False
@@ -539,23 +581,26 @@ class Vis(QWidget):
         print('self.output_dir = ',self.output_dir)
         # xml_file = Path(self.output_dir, "initial.xml")
         # xml_files = glob.glob('tmpdir/output*.xml')
-        xml_files = glob.glob('output*.xml')
+        xml_files = glob.glob(self.output_dir+'/output*.xml')  # cross-platform OK?
+        # print('xml_files = ',xml_files)
+        # xml_files = Path(self.output_dir, "initial.xml")
         if len(xml_files) == 0:
             return
         xml_files.sort()
-        svg_files = glob.glob('snapshot*.svg')
-        svg_files.sort()
+        # svg_files = glob.glob('snapshot*.svg')
+        # svg_files.sort()
         print('xml_files = ',xml_files)
-        num_xml = len(xml_files)
-        print('svg_files = ',svg_files)
-        num_svg = len(svg_files)
-        print('num_xml, num_svg = ',num_xml, num_svg)
+        # num_xml = len(xml_files)
+        # print('svg_files = ',svg_files)
+        # num_svg = len(svg_files)
+        # print('num_xml, num_svg = ',num_xml, num_svg)
         last_xml = int(xml_files[-1][-12:-4])
-        last_svg = int(svg_files[-1][-12:-4])
-        print('last_xml, _svg = ',last_xml,last_svg)
-        self.current_svg_frame = last_xml
-        if last_svg < last_xml:
-            self.current_svg_frame = last_svg
+        # last_svg = int(svg_files[-1][-12:-4])
+        # print('last_xml, _svg = ',last_xml,last_svg)
+        print('last_xml = ',last_xml)
+        self.current_frame = last_xml
+        # if last_svg < last_xml:
+            # self.current_frame = last_svg
         self.update_plots()
 
     def back_plot_cb(self, text):
@@ -563,10 +608,10 @@ class Vis(QWidget):
             self.reset_model()
             self.reset_model_flag = False
 
-        self.current_svg_frame -= 1
-        if self.current_svg_frame < 0:
-            self.current_svg_frame = 0
-        # print('svg # ',self.current_svg_frame)
+        self.current_frame -= 1
+        if self.current_frame < 0:
+            self.current_frame = 0
+        # print('frame # ',self.current_frame)
 
         self.update_plots()
 
@@ -576,8 +621,8 @@ class Vis(QWidget):
             self.reset_model()
             self.reset_model_flag = False
 
-        self.current_svg_frame += 1
-        # print('svg # ',self.current_svg_frame)
+        self.current_frame += 1
+        # print('frame # ',self.current_frame)
 
         self.update_plots()
 
@@ -588,10 +633,11 @@ class Vis(QWidget):
     # used by animate
     def play_plot_cb(self):
         for idx in range(1):
-            self.current_svg_frame += 1
-            # print('svg # ',self.current_svg_frame)
+            self.current_frame += 1
+            # print('frame # ',self.current_frame)
 
-            fname = "snapshot%08d.svg" % self.current_svg_frame
+            # fname = "snapshot%08d.svg" % self.current_frame
+            fname = "output%08d.xml" % self.current_frame
             full_fname = os.path.join(self.output_dir, fname)
             # print("full_fname = ",full_fname)
             # with debug_view:
@@ -601,9 +647,9 @@ class Vis(QWidget):
                 # print("Once output files are generated, click the slider.")   
                 print("play_plot_cb():  Reached the end (or no output files found).")
                 # self.timer.stop()
-                # self.current_svg_frame -= 1
+                # self.current_frame -= 1
                 self.animating_flag = True
-                self.current_svg_frame = 0
+                self.current_frame = 0
                 self.animate()
                 return
 
@@ -632,7 +678,7 @@ class Vis(QWidget):
                 self.reset_model()
                 self.reset_model_flag = False
 
-            # self.current_svg_frame = 0
+            # self.current_frame = 0
             self.timer.start(1)
 
         else:
@@ -644,9 +690,9 @@ class Vis(QWidget):
 
     # def play_plot_cb0(self, text):
     #     for idx in range(10):
-    #         self.current_svg_frame += 1
-    #         print('svg # ',self.current_svg_frame)
-    #         self.plot_svg(self.current_svg_frame)
+    #         self.current_frame += 1
+    #         print('svg # ',self.current_frame)
+    #         self.plot_svg(self.current_frame)
     #         self.canvas.update()
     #         self.canvas.draw()
     #         # time.sleep(1)
@@ -654,8 +700,8 @@ class Vis(QWidget):
     #         # self.canvas.pause(0.05)
 
     def prepare_plot_cb(self, text):
-        self.current_svg_frame += 1
-        print('\n\n   ====>     prepare_plot_cb(): svg # ',self.current_svg_frame)
+        self.current_frame += 1
+        print('\n\n   ====>     prepare_plot_cb(): svg # ',self.current_frame)
 
         self.update_plots()
 
@@ -724,9 +770,9 @@ class Vis(QWidget):
 
         # if self.plot_svg_flag:
         # if False:
-        #     self.plot_svg(self.current_svg_frame)
+        #     self.plot_svg(self.current_frame)
         # else:
-        #     self.plot_substrate(self.current_svg_frame)
+        #     self.plot_substrate(self.current_frame)
 
         # print("create_figure(): ------- creating dummy contourf")
         # xlist = np.linspace(-3.0, 3.0, 50)
@@ -760,9 +806,9 @@ class Vis(QWidget):
 
         # # plt.subplots_adjust(left=0, bottom=0.05, right=1, top=1, wspace=0, hspace=0)
 
-        # # self.plot_substrate(self.current_svg_frame)
-        # # self.plot_svg(self.current_svg_frame)
-        self.plot_cells3D(self.current_svg_frame)
+        # # self.plot_substrate(self.current_frame)
+        # # self.plot_svg(self.current_frame)
+        self.plot_cells3D(self.current_frame)
         # # self.canvas.draw()
 
     #------------------------------------------------------------
@@ -822,24 +868,46 @@ class Vis(QWidget):
 
         # update VTK pipeline
         self.points.Reset()
-        self.cellID.Reset()
-        self.colors.Reset()
+        # self.cellID.Reset()
+        self.radii.Reset()
+        self.cell_data.Reset()
+        self.tags.Reset()
+        # self.colors.Reset()
+        # self.cellVolume.Reset()
         # points.InsertNextPoint(0, 0, 0)
         # points.InsertNextPoint(1, 1, 1)
         # points.InsertNextPoint(2, 2, 2)
+
+        self.cell_data.SetNumberOfTuples(ncells)
+
         for idx in range(ncells):
             x= mcds.data['discrete_cells']['position_x'][idx]
             y= mcds.data['discrete_cells']['position_y'][idx]
             z= mcds.data['discrete_cells']['position_z'][idx]
             id = mcds.data['discrete_cells']['cell_type'][idx]
             self.points.InsertNextPoint(x, y, z)
-            # cellVolume.InsertNextValue(30.0)
-            self.cellID.InsertNextValue(id)
+            # self.cellVolume.InsertNextValue(30.0 + 2*idx)
+            total_volume = mcds.data['discrete_cells']['total_volume'][idx]
+            # self.cellVolume.InsertNextValue(1.0 + 2*idx)
 
-        self.polydata.SetPoints(self.points)
-        # polydata.GetPointData().SetScalars(cellVolume)
-        # self.polydata.GetPointData().SetScalars(self.cellID)
-        self.polydata.GetPointData().SetScalars(self.colors)
+            # rval = (total_volume*3/4/pi)**1/3
+            rval = (total_volume * 0.2387) ** 0.333333
+            # print(idx,") total_volume= ", total_volume, ", rval=",rval )
+            # self.cellID.InsertNextValue(id)
+            self.radii.InsertNextValue(rval)
+            # self.tags.InsertNextValue(float(idx)/ncells)   # multicolored; heatmap across all cells
+            self.tags.InsertNextValue(1.0 - cell_type[idx])   # hacky 2-colors based on colormap
+
+        self.cell_data.CopyComponent(0, self.radii, 0)
+        self.cell_data.CopyComponent(1, self.tags, 0)
+        # self.ugrid.SetPoints(self.points)
+        # self.ugrid.GetPointData().AddArray(self.cell_data)
+        # self.ugrid.GetPointData().SetActiveScalars("cell_data")
+
+        # self.polydata.SetPoints(self.points)
+        # self.polydata.GetPointData().SetScalars(self.cellVolume)
+        # # self.polydata.GetPointData().SetScalars(self.cellID)
+        # # self.polydata.GetPointData().SetScalars(self.colors)
 
         cellID_color_dict = {}
         # for idx in range(ncells):
@@ -849,20 +917,28 @@ class Vis(QWidget):
         #     cellID_color_dict[utype] = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
 
         # hardcode colors for now
-        cellID_color_dict[0.0]=[170,170,170]  # cancer cell
-        cellID_color_dict[1.0]=[255,0,0]  # endothelial
-        print("color dict=",cellID_color_dict)
+        # cellID_color_dict[0.0]=[170,170,170]  # cancer cell
+        # cellID_color_dict[1.0]=[255,0,0]  # endothelial
+        # print("color dict=",cellID_color_dict)
 
-        self.colors.SetNumberOfTuples(self.polydata.GetNumberOfPoints())  # ncells
-        for idx in range(ncells):
-        # for idx in range(len(unique_cell_type)):
-            # colors.InsertTuple3(idx, randint(0,255), randint(0,255), randint(0,255)) 
-            # if idx < 5:
-                # print(idx,cellID_color_dict[cell_type[idx]])
-            self.colors.InsertTuple3(idx, cellID_color_dict[cell_type[idx]][0], cellID_color_dict[cell_type[idx]][1], cellID_color_dict[cell_type[idx]][2])
+        # self.colors.SetNumberOfTuples(self.polydata.GetNumberOfPoints())  # ncells
+        # for idx in range(ncells):
+        # # for idx in range(len(unique_cell_type)):
+        #     # colors.InsertTuple3(idx, randint(0,255), randint(0,255), randint(0,255)) 
+        #     # if idx < 5:
+        #         # print(idx,cellID_color_dict[cell_type[idx]])
+        #     self.colors.InsertTuple3(idx, cellID_color_dict[cell_type[idx]][0], cellID_color_dict[cell_type[idx]][1], cellID_color_dict[cell_type[idx]][2])
 
 
-        # glyph.SetScaleModeToDataScalingOn()
+        # self.glyph.SetScaleModeToDataScalingOn()
+
+        # self.glyph.SetScaleModeToScaleByVector ()
+        # self.glyph.SetScaleModeToScaleByScalar ()
+        # self.glyph.SetColorModeToColorByVector ()
+        print("glyph range= ",self.glyph.GetRange())
+        # self.glyph.SetRange(0.0, 0.11445075055913652)
+        # self.glyph.SetScaleFactor(3.0)
+
         # glyph.ScalingOn()
         self.glyph.Update()
 
